@@ -120,10 +120,10 @@
     <axis xyz="0 0 1" />
     <limit lower="0" upper="0.6" effort="100" velocity="1" />
   </joint>
-  <material name="left_3d_printed">
+  <material name="3d_printed">
     <color rgba="1.0 0.82 0.12 1.0" />
   </material>
-  <material name="left_sts3215">
+  <material name="sts3215">
     <color rgba="0.1 0.1 0.1 1.0" />
   </material>
   <link name="left_base_link">
@@ -457,12 +457,6 @@
     <child link="left_base_link" />
     <origin xyz="0.05 0.12 0.025" rpy="0 0 0" />
   </joint>
-  <material name="right_3d_printed">
-    <color rgba="1.0 0.82 0.12 1.0" />
-  </material>
-  <material name="right_sts3215">
-    <color rgba="0.1 0.1 0.1 1.0" />
-  </material>
   <link name="right_base_link">
     <inertial>
       <origin xyz="0.0137179 -5.19711e-05 0.0334843" rpy="0 0 0" />

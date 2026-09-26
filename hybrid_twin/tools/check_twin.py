@@ -43,10 +43,13 @@ def check_mjcf() -> None:
     x2, y2, _ = twin.base_pose()
     assert abs(x2 - x) < 0.03 and abs((y2 - y) - 0.2) < 0.03, "body->world frame conversion wrong"
 
-    # 4) lift to 300 mm (the lift lever).
-    twin.run({"lift_axis.height_mm": 300.0}, seconds=2.0)
+    # 4) lift to 300 mm (the lift lever). Real speed is ~27 mm/s on alohamini1 (84 mm lead).
+    twin.run({"lift_axis.height_mm": 300.0}, seconds=5.0)
+    h5 = twin.lift_height_mm()
+    assert 120 < h5 < 150, f"lift speed wrong: {h5:.1f} mm after 5 s (expect ~133)"
+    twin.run({"lift_axis.height_mm": 300.0}, seconds=10.0)
     h = twin.lift_height_mm()
-    assert abs(h - 300) < 10, f"lift wrong: {h:.1f} mm"
+    assert abs(h - 300) < 3, f"lift wrong: {h:.1f} mm"
 
     # 5) arms: joint targets in radians track (teleop feeds these on the real robot).
     targets = {"left_shoulder_lift": -0.6, "right_elbow_flex": 0.8, "left_gripper": 1.0}
@@ -76,6 +79,8 @@ def check_urdf() -> None:
     assert roots == {"world"}, f"URDF must have one root, found {roots}"
     missing = [m.get("filename") for m in root.iter("mesh") if not (URDF.parent / m.get("filename")).is_file()]
     assert not missing, f"missing meshes: {missing[:3]}"
+    undefined = {m.get("name") for m in root.iter("material")} - {m.get("name") for m in root.findall("material")}
+    assert not undefined, f"material refs without a definition (renders grey on the web): {undefined}"
     movable = [j.get("name") for j in root.findall("joint") if j.get("type") != "fixed"]
     print(f"URDF ok: {len(links)} links, {len(movable)} movable joints, all "
           f"{sum(1 for _ in root.iter('mesh'))} mesh refs resolve")

@@ -19,6 +19,9 @@ import numpy as np
 
 WATCHDOG_S = 1.0  # AlohaMiniHostConfig.watchdog_timeout_ms
 LIFT_MAX_MM = 600.0  # LiftAxisConfig.soft_max_mm
+# LiftAxis velocity loop (lift_axis.py): v = kp_vel * err, capped at v_max, zero within on_target_mm.
+# Units are servo ticks/s; 4096 ticks per lead-screw revolution.
+LIFT_KP_VEL, LIFT_V_MAX, LIFT_ON_TARGET_MM = 300.0, 1300.0, 1.0
 ARM_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper")
 
 # VERIFY on the lab robot: flip to -1 for any joint where the twin moves opposite to the real arm.
@@ -26,8 +29,11 @@ JOINT_SIGN = {j: 1 for j in ARM_JOINTS}
 
 
 class TwinDriver:
-    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData):
+    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, lift_lead_mm_per_rev: float = 84.0):
+        """``lift_lead_mm_per_rev``: 84 for alohamini1, 131 for alohamini2/2pro (model_specs.py)."""
         self.m, self.d = model, data
+        self._mm_per_tick = lift_lead_mm_per_rev / 4096.0
+        self._lift_v_mm_s = 0.0  # like the servo's Goal_Velocity: persists until the next command
         self._base_qadr = [model.joint(n).qposadr[0] for n in ("base_x", "base_y", "base_yaw")]
         self._base_dadr = [model.joint(n).dofadr[0] for n in ("base_x", "base_y", "base_yaw")]
         self._base_act = [model.actuator(f"{n}_vel").id for n in ("base_x", "base_y", "base_yaw")]
@@ -42,8 +48,10 @@ class TwinDriver:
         self._body_vel = np.array([action.get("x.vel", 0.0), action.get("y.vel", 0.0),
                                    math.radians(action.get("theta.vel", 0.0))])
         if "lift_axis.height_mm" in action:
-            mm = min(max(float(action["lift_axis.height_mm"]), 0.0), LIFT_MAX_MM)
-            self.d.ctrl[self._lift_act] = mm / 1000.0
+            target = min(max(float(action["lift_axis.height_mm"]), 0.0), LIFT_MAX_MM)
+            err = target - self.lift_height_mm()
+            v_ticks = 0.0 if abs(err) <= LIFT_ON_TARGET_MM else max(-LIFT_V_MAX, min(LIFT_V_MAX, LIFT_KP_VEL * err))
+            self._lift_v_mm_s = v_ticks * self._mm_per_tick
         self._last_cmd_t = self.d.time
 
     def set_arm_radians(self, targets: dict[str, float]) -> None:
@@ -56,11 +64,18 @@ class TwinDriver:
     def run(self, action: dict[str, float], seconds: float, send: bool = True, realtime: bool = False) -> None:
         """Step for ``seconds``. With ``send``, re-send ``action`` every step like a streaming client;
         without it, no commands arrive and the watchdog stops the base after WATCHDOG_S."""
-        for _ in range(round(seconds / self.m.opt.timestep)):
+        # Accumulate a sim-time target so irregular wall-clock ticks don't drift through rounding.
+        self._sim_target = max(getattr(self, "_sim_target", 0.0), self.d.time) + seconds
+        while self.d.time + self.m.opt.timestep / 2 < self._sim_target:
             if send:
                 self.send_action(action)
             if self.d.time - self._last_cmd_t > WATCHDOG_S:
-                self._body_vel[:] = 0.0  # mirror the Host watchdog
+                self._body_vel[:] = 0.0  # mirror the Host watchdog (stop_motion)
+                self._lift_v_mm_s = 0.0
+            # The lift setpoint moves at the servo velocity; the position actuator just tracks it.
+            dt = self.m.opt.timestep
+            setpoint = self.d.ctrl[self._lift_act] + self._lift_v_mm_s / 1000.0 * dt
+            self.d.ctrl[self._lift_act] = min(max(setpoint, 0.0), LIFT_MAX_MM / 1000.0)
             yaw = self.d.qpos[self._base_qadr[2]]
             c, s = math.cos(yaw), math.sin(yaw)
             vx, vy, w = self._body_vel
@@ -91,6 +106,7 @@ class TwinDriver:
         """Mirror a real Host observation (port 5556 JSON) onto the twin: arms + lift."""
         self.set_arm_radians(robot_state_to_twin_radians(observation, robot_metadata))
         if "lift_axis.height_mm" in observation:
+            self._lift_v_mm_s = 0.0
             self.d.ctrl[self._lift_act] = float(observation["lift_axis.height_mm"]) / 1000.0
 
     def _hold_arm_pose(self) -> None:

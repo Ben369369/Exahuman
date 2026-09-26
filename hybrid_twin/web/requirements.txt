@@ -1,0 +1,4 @@
+aiohttp>=3.9
+pyzmq>=25
+mujoco>=3.2
+numpy

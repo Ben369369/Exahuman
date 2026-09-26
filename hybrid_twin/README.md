@@ -30,6 +30,7 @@ hybrid_twin/
 ├── mujoco/alohamini_twin.xml   GENERATED full robot (base + lift + 2 arms)
 ├── urdf/alohamini_twin.urdf    GENERATED same robot for the web (three.js / urdf-loaders)
 ├── cameras_am2pro.yaml
+├── web/                    browser control UI + bridge (sim or real robot), see web/README.md
 └── tools/
     ├── build_twin.py      regenerates both files from one parameter set
     ├── twin_driver.py     drives the twin with the real robot's action keys; maps real state → twin
@@ -54,6 +55,17 @@ python -m mujoco.viewer --mjcf=hybrid_twin/arms/so101/scene.xml   # original sin
 - lift/arm-only commands leave the base still;
 - the 1 s watchdog stops the base.
 
+## Web control
+
+```bash
+pip install -r hybrid_twin/web/requirements.txt
+python hybrid_twin/web/server.py                     # drive the MuJoCo twin at http://localhost:8080
+python hybrid_twin/web/server.py --robot-ip <pi-ip>  # drive the real robot
+```
+
+See [web/README.md](web/README.md) for controls, safety behaviour and the teleop ownership
+conflict to resolve with the Pi side.
+
 ## Control contract (same for twin and real robot)
 
 The twin accepts exactly what the AlohaMini Host takes on ZMQ port 5555:
@@ -63,7 +75,7 @@ The twin accepts exactly what the AlohaMini Host takes on ZMQ port 5555:
 | W / S | `x.vel` | m/s, + forward | ±0.15 / 0.2 / 0.25 |
 | strafe | `y.vel` | m/s, + left | same |
 | A / D rotate | `theta.vel` | **deg/s**, + CCW | ±45 / 60 / 75 |
-| lift lever | `lift_axis.height_mm` | absolute, 0–600 mm | — |
+| lift lever | `lift_axis.height_mm` | absolute, 0–600 mm; real speed ~27 mm/s (alohamini1) | — |
 | arms | `arm_{left,right}_<joint>.pos` | from leader-arm teleop | — |
 
 Rules copied from the Host, which the web client must follow too:

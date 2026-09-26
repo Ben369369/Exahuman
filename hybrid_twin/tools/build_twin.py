@@ -120,6 +120,12 @@ def build_mjcf(spec_params: dict, out_path: Path) -> None:
         frame = carriage.add_frame(pos=[g["arm_mount_x"], sign * g["arm_mount_y"], sz / 2])
         frame.attach_body(arm.body("base"), f"{side}_", "")
 
+    # The real lift is a self-locking lead screw and the arm servos hold their pose, so cancel
+    # gravity on everything the lift carries; otherwise a "hold here" target sags each tick.
+    for body in spec.bodies:
+        if body.name == "vertical_link" or body.name.startswith(("left_", "right_")):
+            body.gravcomp = 1.0
+
     for jn in ("base_x", "base_y", "base_yaw"):
         spec.add_actuator(name=f"{jn}_vel", target=jn, trntype=mujoco.mjtTrn.mjTRN_JOINT,
                           gainprm=[500] + [0] * 9, biastype=mujoco.mjtBias.mjBIAS_AFFINE,
@@ -207,6 +213,11 @@ def build_urdf(spec_params: dict, out_path: Path) -> None:
         for el in arm_tree:
             if el.tag == "transmission":
                 continue
+            if el.tag == "material":
+                # Shared by both arms and referenced by name, so define once, unprefixed.
+                if side == "left":
+                    robot.append(copy.deepcopy(el))
+                continue
             el = copy.deepcopy(el)
             if el.tag in ("link", "joint"):
                 el.set("name", f"{side}_{el.get('name')}")
@@ -215,8 +226,6 @@ def build_urdf(spec_params: dict, out_path: Path) -> None:
                     ref.set("link", f"{side}_{ref.get('link')}")
                 if ref.tag == "mesh" and ref.get("filename", "").startswith("assets/"):
                     ref.set("filename", mesh_prefix + ref.get("filename"))
-                if ref.tag == "material" and ref.get("name") and ref.find("color") is not None:
-                    ref.set("name", f"{side}_{ref.get('name')}")
             robot.append(el)
         joint(f"{side}_arm_mount", "fixed", "vertical_link", f"{side}_base_link",
               xyz=(g["arm_mount_x"], sign * g["arm_mount_y"], sz / 2))

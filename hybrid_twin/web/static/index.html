@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AlohaMini Twin</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+        "urdf-loader": "https://cdn.jsdelivr.net/npm/urdf-loader@0.12.3/src/URDFLoader.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="viewport" aria-label="3D view of the robot twin"></div>
+
+  <header class="topbar">
+    <div class="brand">AlohaMini <span>twin</span></div>
+    <div class="pills">
+      <span id="pill-link" class="pill pill-off">connecting…</span>
+      <span id="pill-mode" class="pill">—</span>
+      <span id="pill-control" class="pill">—</span>
+    </div>
+    <button id="btn-control" class="btn-ghost" type="button">Take control</button>
+  </header>
+
+  <aside class="panel panel-left">
+    <section>
+      <h2>Drive</h2>
+      <div class="keys" id="keys">
+        <span></span><kbd data-key="w">W</kbd><span></span>
+        <kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd>
+      </div>
+      <div class="keys keys-rot">
+        <kbd data-key="q">Q</kbd><span class="hint">rotate</span><kbd data-key="e">E</kbd>
+      </div>
+      <p class="hint">W/S forward · A/D strafe · Q/E turn</p>
+      <div class="seg" id="speed" role="radiogroup" aria-label="Speed">
+        <button type="button" data-i="0">Slow</button>
+        <button type="button" data-i="1" class="on">Med</button>
+        <button type="button" data-i="2">Fast</button>
+      </div>
+      <p class="hint" id="speed-hint">0.20 m/s · 60°/s</p>
+    </section>
+
+    <section>
+      <h2>Arms</h2>
+      <p class="hint">Leader-arm teleop. The web UI never commands the arms.</p>
+      <table class="joints" id="joints"></table>
+    </section>
+  </aside>
+
+  <aside class="panel panel-right">
+    <section class="lift">
+      <h2>Lift</h2>
+      <div class="lever">
+        <div class="lever-track" id="lever-track">
+          <div class="lever-fill" id="lever-fill"></div>
+          <div class="lever-actual" id="lever-actual"></div>
+          <div class="lever-goal" id="lever-goal" tabindex="0" role="slider"
+               aria-label="Lift height goal" aria-valuemin="0" aria-valuemax="600"></div>
+        </div>
+        <div class="lever-scale"><span>600</span><span>450</span><span>300</span><span>150</span><span>0 mm</span></div>
+      </div>
+      <dl class="readout">
+        <dt>Actual</dt><dd id="lift-actual">—</dd>
+        <dt>Goal</dt><dd id="lift-goal">—</dd>
+      </dl>
+      <p class="hint">Click or drag the track to set a height · hold R / F to jog</p>
+    </section>
+
+    <button id="estop" class="estop" type="button">STOP<small>Space</small></button>
+
+    <section>
+      <h2>Telemetry</h2>
+      <dl class="readout">
+        <dt>Pose</dt><dd id="t-pose">—</dd>
+        <dt>Velocity</dt><dd id="t-vel">—</dd>
+        <dt>Command</dt><dd id="t-cmd">—</dd>
+        <dt>Rate</dt><dd id="t-rate">—</dd>
+        <dt>Host</dt><dd id="t-safety">—</dd>
+      </dl>
+    </section>
+  </aside>
+
+  <div class="view-tools">
+    <button id="btn-follow" class="btn-ghost on" type="button">Follow</button>
+    <button id="btn-reset" class="btn-ghost" type="button">Reset view</button>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
