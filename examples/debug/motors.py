@@ -1,0 +1,767 @@
+import argparse
+import os
+import sys
+import time
+
+from lerobot.motors import Motor, MotorNormMode
+from lerobot.motors.feetech import (
+    FeetechMotorsBus,
+    OperatingMode,
+)
+
+DEFAULT_PORT = "/dev/ttyACM0"
+HALF_TURN_DEGREE = 180
+
+GENERAL_ACTIONS = {"sleep", "print"}
+DEFAULT_FEETECH_MODEL = "sts3215"
+SCAN_START = 1
+SCAN_END = 22
+
+
+# --------------------------- Probe / Scan helpers (reusable) --------------------------- #
+
+
+def probe_scan_ids(port: str) -> dict[int, str]:
+    """
+    Probe-scan the ID range and return {id: model_name} for online motors only.
+    Only pings; does not write registers. Disconnect without disabling torque.
+    """
+
+    probe_bus = build_bus(port, {})
+    try:
+        probe_bus.connect(handshake=False)
+    except Exception as e:
+        print(f"Scan connect failed: {e}")
+        return {}
+
+    found: dict[int, str] = {}
+    try:
+        for mid in range(int(SCAN_START), int(SCAN_END) + 1):
+            try:
+                model_nb = probe_bus.ping(mid, num_retry=1)
+                if model_nb is not None:
+                    try:
+                        model_name = probe_bus._model_nb_to_model(model_nb)
+                    except Exception:
+                        model_name = str(model_nb)
+                    found[mid] = model_name
+            except Exception:
+                continue
+    finally:
+        try:
+            probe_bus.disconnect(disable_torque=False)
+        except Exception:
+            pass
+    return found
+
+
+def build_motors_from_scan(port: str):
+    """
+    Build a motors dict from probe_scan_ids (names as motor_<id>).
+    """
+    from lerobot.motors.motors_bus import Motor, MotorNormMode
+
+    found = probe_scan_ids(port)
+    if not found:
+        return {}
+    motors = {
+        f"motor_{mid}": Motor(id=mid, model=model, norm_mode=MotorNormMode.RANGE_0_100)
+        for mid, model in found.items()
+    }
+    return motors
+
+
+def parse_actions(file_path):
+    actions = []
+    with open(file_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = [part.strip() for part in line.split(",")]
+            actions.append(parts)
+    return actions
+
+
+def evaluate_expression(expression, variables):
+    """
+    expression evaluation, supporting {variables} and +/− operations.
+    e.g. "{Present_Position} + 500"
+    """
+    for var, value in variables.items():
+        expression = expression.replace(f"{{{var}}}", str(value))
+    try:
+        return eval(expression)
+    except Exception as e:
+        print(f"Error evaluating expression '{expression}': {e}")
+        return None
+
+
+def build_bus(port, motors):
+    return FeetechMotorsBus(port=port, motors=motors)
+
+
+# --------------------------- High‑level helpers --------------------------- #
+
+
+def _connect_bus(bus):
+    try:
+        bus.connect(handshake=False)
+        print(f"Connected on port {bus.port}")
+        return True
+    except OSError as e:
+        print(f"Error occurred when connecting to the motor bus: {e}")
+        return False
+
+
+def _motor_angle_from_position(position):
+    return position / (4096 // 2) * HALF_TURN_DEGREE
+
+
+# -------------------------------------------------------------- #
+# ---------------------------Function--------------------------- #
+# -------------------------------------------------------------- #
+
+
+def get_motors_states(port):
+    """
+    Display a live table of motor states. Always scan [scan_start, scan_end] and show online motors only.
+    - Even if motors are provided, rebuild from scanned IDs to avoid reading offline IDs.
+    """
+    import shutil
+    import time
+
+    # Enable ANSI escape codes on Windows (no-op on other platforms).
+    if sys.platform == "win32":
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+
+    # ---------- ANSI helpers ----------
+    CSI = "\x1b["
+
+    def _hide_cursor():
+        sys.stdout.write(f"{CSI}?25l")
+        sys.stdout.flush()
+
+    def _show_cursor():
+        sys.stdout.write(f"{CSI}?25h")
+        sys.stdout.flush()
+
+    def _move_up(n):
+        sys.stdout.write(f"{CSI}{n}A") if n > 0 else None
+        sys.stdout.flush()
+
+    def _clear_line():
+        sys.stdout.write(f"{CSI}2K\r")
+
+    def _term_width():
+        try:
+            return max(60, min(200, shutil.get_terminal_size().columns))
+        except Exception:
+            return 100
+
+    def _format_row(name: str, st: dict, maxw: int) -> str:
+        def F(v, w, a=">"):
+            s = "-" if v is None else str(v)
+            if len(s) > w:
+                s = s[:w]
+            return f"{s:{a}{w}}"
+
+        row = (
+            f"{F(name, 15, '<')} | {F(st.get('ID'), 3)} | {F(st.get('Model'), 8, '<')} | {F(st.get('Position'), 6)} | "
+            f"{F(st.get('Offset'), 6)} | {F(st.get('Angle'), 6)} | "
+            f"{F(st.get('Acceleration'), 6)} | "
+            f"{F(st.get('Voltage'), 4)} | {F(st.get('Current(mA)'), 8)} | "
+            f"{F(st.get('Temperature'), 4)} | {F(st.get('Phase'), 5)}"
+        )
+        return row[:maxw] if len(row) > maxw else row
+
+    # ---------- Step 1: probe scan online motors ----------
+
+    motors = build_motors_from_scan(port)
+    if not motors:
+        print(f"No motors found in ID range [{SCAN_START}, {SCAN_END}] on {port}.")
+        return
+
+    # ---------- Step 2: display using only online motors ----------
+    bus = build_bus(port, motors)
+    if not _connect_bus(bus):  # keep handshake=False in helper for stability
+        return
+
+    try:
+        ids_str = ", ".join(str(m.id) for m in bus.motors.values())
+        print(f"Online IDs: [{ids_str}] on {port}")
+
+        printed_lines = 0
+        interval_s = 0.1
+        _hide_cursor()
+
+        while True:
+            try:
+                pos = bus.sync_read("Present_Position", normalize=False)
+                acc = bus.sync_read("Maximum_Acceleration", normalize=False)
+                volt = bus.sync_read("Present_Voltage", normalize=False)
+                curr = bus.sync_read("Present_Current", normalize=False)
+                offset = bus.sync_read("Homing_Offset", normalize=False)
+                temp = bus.sync_read("Present_Temperature", normalize=False)
+                phase = bus.sync_read("Phase", normalize=False)
+            except Exception as e:
+                print(f"Sync read error: {e}")
+                break
+
+            rows = []
+            for name in motors.keys():
+                try:
+                    st = {
+                        "ID": bus.read("ID", name, normalize=False),
+                        "Model": getattr(bus.motors.get(name), "model", None),
+                        "Position": pos.get(name),
+                        "Acceleration": acc.get(name),
+                        "Voltage": volt.get(name),
+                        "Current(mA)": (curr.get(name) * 6.5) if (curr.get(name) is not None) else None,
+                        "Offset": offset.get(name),
+                        "Temperature": temp.get(name),
+                        "Phase": phase.get(name),
+                    }
+                    angle = _motor_angle_from_position(st["Position"]) if st["Position"] is not None else None
+                    # pos_raw = st["Position"]
+                    # off_raw = st["Offset"]
+                    # angle = _motor_angle_from_position(pos_raw - off_raw) if pos_raw is not None else None
+
+                    st["Angle"] = None if angle is None else round(angle, 1)
+                    rows.append((name, st))
+                except Exception:
+                    continue
+
+            maxw = _term_width()
+            sep = "-" * min(maxw, 140)  # expanded from 120 to 140
+            header = (
+                f"{'NAME':<15} | {'ID':>3} | {'MODEL':<8} | {'POS':>6} | {'OFF':>6} | {'ANG':>6} | "
+                f"{'ACC':>6} | {'VOLT':>4} | {'CURR(MA)':>8} | {'TEMP':>4} | {'PHASE':>5}"
+            )
+            header = header[:maxw] if len(header) > maxw else header
+            frame_lines = (
+                [sep, header]
+                + [_format_row(n, s, maxw) for (n, s) in rows]
+                + [sep, f"Updated: {time.strftime('%H:%M:%S')}   (Ctrl+C 退出)"]
+            )
+
+            _move_up(printed_lines)
+            for ln in frame_lines:
+                _clear_line()
+                sys.stdout.write(ln + "\n")
+
+            extra = printed_lines - len(frame_lines)
+            for _ in range(max(0, extra)):
+                _clear_line()
+                sys.stdout.write("\n")
+
+            sys.stdout.flush()
+            printed_lines = len(frame_lines)
+            time.sleep(interval_s)
+
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Important: do not disable torque for all motors on disconnect (offline IDs error).
+        try:
+            bus.disconnect(disable_torque=False)
+        finally:
+            _show_cursor()
+
+
+def configure_motor_id(port: str, current_id: int, new_id: int):
+    current_id = int(current_id)
+    new_id = int(new_id)
+    if current_id == new_id:
+        raise SystemExit("current_id == new_id; no change needed.")
+
+    # 1) Use a bare bus to ping (no motors map to avoid extra work).
+    probe_bus = FeetechMotorsBus(port=port, motors={})
+    try:
+        probe_bus.connect(handshake=False)
+        ok_cur = probe_bus.ping(current_id, num_retry=1) is not None
+        ok_new = probe_bus.ping(new_id, num_retry=1) is not None
+    except Exception as e:
+        raise SystemExit(f"Probe connect failed: {e}")
+    finally:
+        try:
+            probe_bus.disconnect(disable_torque=False)
+        except Exception:
+            pass
+
+    if not ok_cur:
+        raise SystemExit(f"[ABORT] ID={current_id} not found online; abort.")
+    if ok_new:
+        raise SystemExit(f"[ABORT] target ID={new_id} already in use; abort.")
+
+    # 2) Build a bus with only current_id (name doesn't matter, ID does).
+    tmp_name = f"motor_{current_id}"
+    one_motor = {
+        tmp_name: Motor(id=current_id, model=DEFAULT_FEETECH_MODEL, norm_mode=MotorNormMode.RANGE_0_100)
+    }
+
+    bus = FeetechMotorsBus(port=port, motors=one_motor)
+    try:
+        bus.connect(handshake=False)
+        print(f"Connected on port {bus.port} (current_id={current_id})")
+
+        # Safety: unlock & torque handling (adjust/remove as needed).
+        try:
+            bus.write("Lock", tmp_name, 0, normalize=False)
+        except Exception:
+            pass
+        try:
+            bus.disable_torque(tmp_name)
+        except Exception:
+            pass
+
+        # 3) Write ID register for the current motor: ID = new_id
+        bus.write("ID", tmp_name, new_id, normalize=False)
+        time.sleep(0.2)
+
+        # 4) Verify: current_id should be offline, new_id should be online.
+        # Use an empty bus for ping to avoid motors map influence.
+        probe_bus2 = FeetechMotorsBus(port=port, motors={})
+        try:
+            probe_bus2.connect(handshake=False)
+            ok_cur2 = probe_bus2.ping(current_id, num_retry=1) is not None
+            ok_new2 = probe_bus2.ping(new_id, num_retry=1) is not None
+        finally:
+            try:
+                probe_bus2.disconnect(disable_torque=False)
+            except Exception:
+                pass
+
+        if ok_cur2 or not ok_new2:
+            raise SystemExit(
+                f"[VERIFY FAIL] Verification failed: ID={current_id} online={ok_cur2}, ID={new_id} online={ok_new2}"
+            )
+
+        print(f"[OK] Changed ID {current_id} -> {new_id} (model={DEFAULT_FEETECH_MODEL})")
+
+    except Exception as e:
+        print(f"Error during motor ID configuration: {e}")
+    finally:
+        try:
+            bus.disconnect(disable_torque=False)
+        except Exception:
+            pass
+
+
+def _set_phase_on_bus(bus, motor_name: str, motor_id: int, new_phase: int):
+    """Write Phase to a single named motor on an already-connected bus."""
+    try:
+        bus.write("Lock", motor_name, 0, normalize=False)
+    except Exception:
+        pass
+    try:
+        bus.disable_torque(motor_name)
+    except Exception:
+        pass
+
+    old_phase = bus.read("Phase", motor_name, normalize=False)
+    bus.write("Phase", motor_name, new_phase, normalize=False)
+    time.sleep(0.2)
+
+    readback = bus.read("Phase", motor_name, normalize=False)
+    if readback != new_phase:
+        print(f"[VERIFY FAIL] ID={motor_id} Phase readback={readback}, expected={new_phase}")
+    else:
+        print(f"[OK] ID={motor_id} Phase: {old_phase} -> {readback}")
+
+
+def configure_motor_phase(port: str, new_phase: int, motor_id: int = None):
+    """
+    Modify the Phase register.
+    - motor_id provided: change only that motor.
+    - motor_id omitted:  scan the bus and change all online motors.
+    new_phase: typically 0 or 1 (check your motor datasheet).
+    """
+    new_phase = int(new_phase)
+
+    if motor_id is not None:
+        motor_id = int(motor_id)
+
+        # Ping to confirm the motor is online.
+        probe_bus = FeetechMotorsBus(port=port, motors={})
+        try:
+            probe_bus.connect(handshake=False)
+            ok = probe_bus.ping(motor_id, num_retry=1) is not None
+        except Exception as e:
+            raise SystemExit(f"Probe connect failed: {e}")
+        finally:
+            try:
+                probe_bus.disconnect(disable_torque=False)
+            except Exception:
+                pass
+
+        if not ok:
+            raise SystemExit(f"[ABORT] ID={motor_id} not found online; abort.")
+
+        tmp_name = f"motor_{motor_id}"
+        motors = {
+            tmp_name: Motor(id=motor_id, model=DEFAULT_FEETECH_MODEL, norm_mode=MotorNormMode.RANGE_0_100)
+        }
+        bus = FeetechMotorsBus(port=port, motors=motors)
+        try:
+            bus.connect(handshake=False)
+            print(f"Connected on port {bus.port} (ID={motor_id})")
+            _set_phase_on_bus(bus, tmp_name, motor_id, new_phase)
+        except Exception as e:
+            print(f"Error during phase configuration: {e}")
+        finally:
+            try:
+                bus.disconnect(disable_torque=False)
+            except Exception:
+                pass
+
+    else:
+        # No ID specified — scan and update all online motors.
+        motors = build_motors_from_scan(port)
+        if not motors:
+            print(f"No motors found in ID range [{SCAN_START}, {SCAN_END}] on {port}.")
+            return
+
+        bus = FeetechMotorsBus(port=port, motors=motors)
+        try:
+            bus.connect(handshake=False)
+            ids_str = ", ".join(str(m.id) for m in bus.motors.values())
+            print(f"Connected on port {bus.port} — online IDs: [{ids_str}]")
+            for name, motor in motors.items():
+                try:
+                    _set_phase_on_bus(bus, name, motor.id, new_phase)
+                except Exception as e:
+                    print(f"Error on {name} (ID={motor.id}): {e}")
+        except Exception as e:
+            print(f"Error during phase configuration: {e}")
+        finally:
+            try:
+                bus.disconnect(disable_torque=False)
+            except Exception:
+                pass
+
+
+def reset_motors_to_midpoint(port):
+    motors = build_motors_from_scan(port)
+    if not motors:
+        print(f"No motors found in ID range [{SCAN_START}, {SCAN_END}] on {port}.")
+        return
+
+    bus = build_bus(port, motors)
+    if not _connect_bus(bus):
+        return
+
+    try:
+        for name in motors:
+            try:
+                bus.write("Torque_Enable", name, 128, normalize=False)
+                time.sleep(0.1)
+                bus.write("Lock", name, 0, normalize=False)
+                bus.write("Maximum_Acceleration", name, 254, normalize=False)
+                bus.write("Acceleration", name, 254, normalize=False)
+                print(f"------- {name} to midpoint config complete!------")
+            except Exception as motor_e:
+                print(f"Error on '{name}': {motor_e}")
+                continue
+    except Exception as e:
+        print(f"Error during midpoint config: {e}")
+    finally:
+        bus.disconnect()
+
+
+def reset_motors_torque(port):
+    motors = build_motors_from_scan(port)
+    if not motors:
+        print(f"No motors found in ID range [{SCAN_START}, {SCAN_END}] on {port}.")
+        return
+
+    bus = build_bus(port, motors)
+    if not _connect_bus(bus):
+        return
+    try:
+        for name in motors:
+            try:
+                _ = bus.read("ID", name, normalize=False)
+                bus.write("Torque_Enable", name, 0, normalize=False)
+                print(f"------- {name} reset torque complete!------")
+            except Exception as motor_e:
+                print(f"Error on '{name}': {motor_e}")
+                continue
+    except Exception as e:
+        print(f"Error during torque reset: {e}")
+    finally:
+        bus.disconnect()
+
+
+def move_motor_to_position(
+    port: str,
+    motor_id: int,
+    position: int,
+):
+    """
+    Move a motor to a raw position using numeric ID.
+    - No motors{} dict or motor name needed.
+    - Ensures position mode, switching if needed.
+    """
+    tmp_name = f"motor_{int(motor_id)}"
+    one_motor = {
+        tmp_name: Motor(id=int(motor_id), model=DEFAULT_FEETECH_MODEL, norm_mode=MotorNormMode.RANGE_0_100)
+    }
+
+    # Optional: simple clamp (12-bit 0..4095; adjust for your register range).
+    try:
+        position = int(position)
+        position = max(0, min(4095, position))
+    except Exception:
+        raise SystemExit(f"Invalid --position: {position}")
+
+    bus = FeetechMotorsBus(port=port, motors=one_motor)
+    try:
+        bus.connect(handshake=False)
+        print(f"Connected on port {bus.port} (ID={motor_id})")
+
+        # If mode is unknown, switch to position mode for safety.
+        bus.disable_torque(tmp_name)
+        bus.write("Operating_Mode", tmp_name, OperatingMode.POSITION.value, normalize=False)
+        bus.enable_torque(tmp_name)
+
+        pre = bus.read("Present_Position", tmp_name, normalize=False)
+        bus.write("Goal_Position", tmp_name, position, normalize=False)
+
+        print(f"[ID {motor_id}] Present_Position(before)={pre}")
+        print(f"[ID {motor_id}] → Goal_Position={position}")
+        time.sleep(2.0)
+
+    except Exception as e:
+        print(f"Error moving ID {motor_id}: {e}")
+    finally:
+        try:
+            bus.disconnect(disable_torque=False)
+        except Exception:
+            pass
+
+
+def move_motors_by_code(port):
+    motors = {
+        "gripper": Motor(8, DEFAULT_FEETECH_MODEL, MotorNormMode.RANGE_0_100),
+        # "wrist_roll": Motor(6, args.model, MotorNormMode.DEGREES),
+        # "wrist_yaw": Motor(5, args.model, MotorNormMode.DEGREES),
+        # "wrist_flex": Motor(4, args.model, MotorNormMode.DEGREES),
+        # "elbow_flex": Motor(3, args.model, MotorNormMode.DEGREES),
+        # "shoulder_lift": Motor(2, args.model, MotorNormMode.DEGREES),
+        # "shoulder_pan": Motor(1, args.model, MotorNormMode.DEGREES),
+    }
+
+    bus = build_bus(port, motors)
+    if not _connect_bus(bus):
+        return
+
+    try:
+        # demo: open/close gripper around current pos
+        if "gripper" in motors:
+            pos = bus.read("Present_Position", "gripper", normalize=False)
+            print(f"gripper Present_Position: {pos}")
+
+            bus.write("Goal_Position", "gripper", pos + 500, normalize=False)
+            time.sleep(1)
+            p = bus.read("Present_Position", "gripper", normalize=False)
+            print(f"+500 position: {p}")
+
+            bus.write("Goal_Position", "gripper", p - 1000, normalize=False)
+            time.sleep(1)
+            p = bus.read("Present_Position", "gripper", normalize=False)
+            print(f"-1000 position: {p}")
+
+            bus.write("Goal_Position", "gripper", p + 500, normalize=False)
+            time.sleep(1)
+            p = bus.read("Present_Position", "gripper", normalize=False)
+            print(f"+500 position: {p}")
+
+            print("start_reset")
+            bus.write("Goal_Position", "gripper", 2048, normalize=False)
+            time.sleep(2)
+            p = bus.read("Present_Position", "gripper", normalize=False)
+            print(f"reset_position: {p}")
+    except Exception as e:
+        print(f"Error during motor demo: {e}")
+    finally:
+        bus.disconnect()
+
+
+def move_motors_by_script(port, script_path):
+    motors = {
+        "gripper": Motor(8, DEFAULT_FEETECH_MODEL, MotorNormMode.RANGE_0_100),
+        # "wrist_roll": Motor(6, args.model, MotorNormMode.DEGREES),
+        # "wrist_yaw": Motor(5, args.model, MotorNormMode.DEGREES),
+        # "wrist_flex": Motor(4, args.model, MotorNormMode.DEGREES),
+        # "elbow_flex": Motor(3, args.model, MotorNormMode.DEGREES),
+        # "shoulder_lift": Motor(2, args.model, MotorNormMode.DEGREES),
+        # "shoulder_pan": Motor(1, args.model, MotorNormMode.DEGREES),
+    }
+
+    # Resolve script path relative to this file for convenience
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(script_dir, script_path)
+    print(f"script_path:{script_path}")
+    print(f"script_dir:{script_dir}")
+    print(f"file_path:{file_path}")
+
+    bus = build_bus(port, motors)
+    if not _connect_bus(bus):
+        return
+
+    variables = {}
+    actions = parse_actions(file_path)
+    print(f"actions: {actions}")
+
+    try:
+        for action in actions:
+            if not action:
+                continue
+
+            first = action[0]
+
+            # General actions (sleep/print)
+            if first in GENERAL_ACTIONS:
+                if first == "sleep":
+                    if len(action) < 2:
+                        print(f"Invalid sleep action: {action}")
+                        continue
+                    try:
+                        duration = float(action[1])
+                        print(f"Sleeping for {duration} seconds")
+                        time.sleep(duration)
+                    except ValueError:
+                        print(f"Invalid duration for sleep action: {action[1]}")
+                elif first == "print":
+                    if len(action) < 2:
+                        print(f"Invalid print action: {action}")
+                        continue
+                    try:
+                        message = action[1].format(**variables)
+                    except Exception:
+                        message = action[1]
+                    print(message)
+                continue
+
+            # Motor actions
+            motor_name = action[0]
+            if motor_name not in motors:
+                print(f"Motor '{motor_name}' not found. Skipping action.")
+                continue
+
+            if len(action) < 2:
+                print(f"Invalid action (missing type): {action}")
+                continue
+
+            action_type = action[1]
+            print(f"motor_name:{motor_name}, action_type:{action_type}")
+
+            try:
+                if action_type == "read":
+                    if len(action) < 3:
+                        print(f"Invalid read action: {action}")
+                        continue
+                    register = action[2]
+                    value = bus.read(register, motor_name, normalize=False)
+                    print(f"{motor_name} - {register}: {value}")
+                    variables[register] = value
+
+                elif action_type == "write":
+                    if len(action) < 4:
+                        print(f"Invalid write action: {action}")
+                        continue
+                    register = action[2]
+                    value_expr = action[3]
+                    value = evaluate_expression(value_expr, variables)
+                    if value is not None:
+                        bus.write(register, motor_name, value, normalize=False)
+                        print(f"Set {motor_name} - {register} to {value}")
+                else:
+                    print(f"Unknown action type '{action_type}' for motor '{motor_name}'. Skipping.")
+            except Exception as motor_e:
+                print(f"Error performing '{action_type}' on '{motor_name}': {motor_e}")
+                continue
+    except Exception as e:
+        print(f"Error occurred during executing actions: {e}")
+    finally:
+        bus.disconnect()
+        print(f"Disconnected from port {port}")
+    print(f"Completed executing actions from {script_path}")
+
+
+# --------------------------- CLI --------------------------- #
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Motor utilities (LeRobot latest API)")
+
+    parser.add_argument(
+        "command",
+        choices=[
+            "get_motors_states",
+            "configure_motor_id",
+            "configure_motor_phase",
+            "reset_motors_to_midpoint",
+            "reset_motors_torque",
+            "move_motor_to_position",
+            "move_motors_by_code",
+            "move_motors_by_script",
+        ],
+        help="Command to execute",
+    )
+
+    parser.add_argument(
+        "--port", type=str, default=DEFAULT_PORT, help=f"Set the port (default: {DEFAULT_PORT})"
+    )
+    parser.add_argument(
+        "--id", type=str, help="Motor name or CURRENT numeric ID (context depends on subcommand)"
+    )
+    parser.add_argument("--set_id", type=int, help="Desired numeric ID value to set on the motor")
+    parser.add_argument("--set_phase", type=int, help="Desired Phase value to set on the motor")
+    parser.add_argument("--position", type=str, help="Goal position (raw ticks) for move_motor_to_position")
+    parser.add_argument("--script_path", type=str, help="Relative path to CSV-like action script")
+    # parser.add_argument("--file", type=str, help="Path to calibration JSON file")
+
+    args = parser.parse_args()
+    cmd = args.command
+
+    # ---- helpers for dispatch ----
+
+    commands = {
+        "get_motors_states": lambda: get_motors_states(args.port),
+        "configure_motor_id": lambda: (
+            configure_motor_id(args.port, int(args.id), int(args.set_id))
+            if (args.id is not None and args.set_id is not None)
+            else (_ for _ in ()).throw(SystemExit("--id (current numeric ID) and --set_id are required"))
+        ),
+        "configure_motor_phase": lambda: (
+            configure_motor_phase(
+                args.port, int(args.set_phase), int(args.id) if args.id is not None else None
+            )
+            if args.set_phase is not None
+            else (_ for _ in ()).throw(SystemExit("--set_phase is required"))
+        ),
+        "reset_motors_to_midpoint": lambda: reset_motors_to_midpoint(args.port),
+        "reset_motors_torque": lambda: reset_motors_torque(args.port),
+        "move_motor_to_position": lambda: (
+            move_motor_to_position(args.port, args.id, args.position)
+            if (args.id is not None and args.position is not None)
+            else (_ for _ in ()).throw(
+                SystemExit("--id (motor name or numeric ID) and --position are required")
+            )
+        ),
+        "move_motors_by_code": lambda: move_motors_by_code(args.port),
+        "move_motors_by_script": lambda: (
+            move_motors_by_script(args.port, args.script_path)
+            if args.script_path
+            else (_ for _ in ()).throw(SystemExit("--script_path is required for move_motors_by_script"))
+        ),
+    }
+
+    # ---- execute ----
+    fn = commands.get(cmd)
+    if not fn:
+        raise SystemExit(f"Unknown command: {cmd}")
+    fn()
