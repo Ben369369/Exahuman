@@ -1,0 +1,271 @@
+<mujoco model="alohamini_twin">
+  <compiler angle="radian" meshdir="../arms/so101/assets/"/>
+
+  <option integrator="implicitfast"/>
+
+  <default>
+    <default class="left_main">
+      <default class="left_so101_new_calib">
+        <joint armature="0.005" damping="1" frictionloss="0.1"/>
+        <general biastype="affine" gainprm="50" biasprm="0 -50"/>
+        <default class="left_visual">
+          <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+        </default>
+        <default class="left_collision">
+          <geom group="3"/>
+        </default>
+      </default>
+      <default class="left_sts3215">
+        <joint armature="0.028" damping="0.6" frictionloss="0.052"/>
+        <geom contype="0" conaffinity="0"/>
+        <general forcerange="-2.94 2.94" biastype="affine" gainprm="998.22" biasprm="0 -998.22 -2.731"/>
+      </default>
+      <default class="left_backlash">
+        <joint limited="true" range="-0.00872665 0.00872665" armature="0.01" damping="0.01"/>
+      </default>
+    </default>
+    <default class="right_main">
+      <default class="right_so101_new_calib">
+        <joint armature="0.005" damping="1" frictionloss="0.1"/>
+        <general biastype="affine" gainprm="50" biasprm="0 -50"/>
+        <default class="right_visual">
+          <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+        </default>
+        <default class="right_collision">
+          <geom group="3"/>
+        </default>
+      </default>
+      <default class="right_sts3215">
+        <joint armature="0.028" damping="0.6" frictionloss="0.052"/>
+        <geom contype="0" conaffinity="0"/>
+        <general forcerange="-2.94 2.94" biastype="affine" gainprm="998.22" biasprm="0 -998.22 -2.731"/>
+      </default>
+      <default class="right_backlash">
+        <joint limited="true" range="-0.00872665 0.00872665" armature="0.01" damping="0.01"/>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <texture type="2d" colorspace="auto" name="grid" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="grid" texture="grid" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+    <material name="left_base_motor_holder_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_base_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_sts3215_03a_v1_material" rgba="0.1 0.1 0.1 1"/>
+    <material name="left_waveshare_mounting_plate_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_motor_holder_so101_base_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_rotation_pitch_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_upper_arm_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_under_arm_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_motor_holder_so101_wrist_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_sts3215_03a_no_horn_v1_material" rgba="0.1 0.1 0.1 1"/>
+    <material name="left_wrist_roll_pitch_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_wrist_roll_follower_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="left_moving_jaw_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_base_motor_holder_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_base_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_sts3215_03a_v1_material" rgba="0.1 0.1 0.1 1"/>
+    <material name="right_waveshare_mounting_plate_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_motor_holder_so101_base_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_rotation_pitch_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_upper_arm_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_under_arm_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_motor_holder_so101_wrist_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_sts3215_03a_no_horn_v1_material" rgba="0.1 0.1 0.1 1"/>
+    <material name="right_wrist_roll_pitch_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_wrist_roll_follower_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="right_moving_jaw_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <mesh name="left_waveshare_mounting_plate_so101_v2" file="waveshare_mounting_plate_so101_v2.stl"/>
+    <mesh name="left_sts3215_03a_v1" file="sts3215_03a_v1.stl"/>
+    <mesh name="left_motor_holder_so101_base_v1" file="motor_holder_so101_base_v1.stl"/>
+    <mesh name="left_wrist_roll_follower_so101_v1" file="wrist_roll_follower_so101_v1.stl"/>
+    <mesh name="left_moving_jaw_so101_v1" file="moving_jaw_so101_v1.stl"/>
+    <mesh name="left_base_motor_holder_so101_v1" file="base_motor_holder_so101_v1.stl"/>
+    <mesh name="left_upper_arm_so101_v1" file="upper_arm_so101_v1.stl"/>
+    <mesh name="left_wrist_roll_pitch_so101_v2" file="wrist_roll_pitch_so101_v2.stl"/>
+    <mesh name="left_under_arm_so101_v1" file="under_arm_so101_v1.stl"/>
+    <mesh name="left_rotation_pitch_so101_v1" file="rotation_pitch_so101_v1.stl"/>
+    <mesh name="left_motor_holder_so101_wrist_v1" file="motor_holder_so101_wrist_v1.stl"/>
+    <mesh name="left_sts3215_03a_no_horn_v1" file="sts3215_03a_no_horn_v1.stl"/>
+    <mesh name="left_base_so101_v2" file="base_so101_v2.stl"/>
+    <mesh name="right_waveshare_mounting_plate_so101_v2" file="waveshare_mounting_plate_so101_v2.stl"/>
+    <mesh name="right_sts3215_03a_v1" file="sts3215_03a_v1.stl"/>
+    <mesh name="right_motor_holder_so101_base_v1" file="motor_holder_so101_base_v1.stl"/>
+    <mesh name="right_wrist_roll_follower_so101_v1" file="wrist_roll_follower_so101_v1.stl"/>
+    <mesh name="right_moving_jaw_so101_v1" file="moving_jaw_so101_v1.stl"/>
+    <mesh name="right_base_motor_holder_so101_v1" file="base_motor_holder_so101_v1.stl"/>
+    <mesh name="right_upper_arm_so101_v1" file="upper_arm_so101_v1.stl"/>
+    <mesh name="right_wrist_roll_pitch_so101_v2" file="wrist_roll_pitch_so101_v2.stl"/>
+    <mesh name="right_under_arm_so101_v1" file="under_arm_so101_v1.stl"/>
+    <mesh name="right_rotation_pitch_so101_v1" file="rotation_pitch_so101_v1.stl"/>
+    <mesh name="right_motor_holder_so101_wrist_v1" file="motor_holder_so101_wrist_v1.stl"/>
+    <mesh name="right_sts3215_03a_no_horn_v1" file="sts3215_03a_no_horn_v1.stl"/>
+    <mesh name="right_base_so101_v2" file="base_so101_v2.stl"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" size="0 0 0.05" type="plane" material="grid"/>
+    <light pos="0 0 3.5" dir="0 0 -1" type="directional"/>
+    <body name="base_link" pos="0 0 0.1">
+      <joint name="base_x" pos="0 0 0" axis="1 0 0" type="slide"/>
+      <joint name="base_y" pos="0 0 0" axis="0 1 0" type="slide"/>
+      <joint name="base_yaw" pos="0 0 0" axis="0 0 1"/>
+      <geom name="chassis" size="0.16 0.04" type="cylinder" contype="0" conaffinity="0" mass="4" rgba="0.227451 0.247059 0.278431 1"/>
+      <geom name="front_marker" size="0.02 0.01 0.002" pos="0.14 0 0.04" type="box" contype="0" conaffinity="0" mass="0" rgba="0.909804 0.639216 0.239216 1"/>
+      <geom name="column" size="0.02 0.04 0.525" pos="-0.06 0 0.565" type="box" contype="0" conaffinity="0" mass="1.5" rgba="0.603922 0.639216 0.678431 1"/>
+      <body name="wheel_left" pos="0.0625 0.108253 -0.05">
+        <joint name="wheel_left_spin" pos="0 0 0" axis="0.5 0.866025 0" damping="0.01"/>
+        <geom size="0.05 0.015" quat="0.707107 0.612372 -0.353553 0" type="cylinder" contype="0" conaffinity="0" mass="0.2" rgba="0.105882 0.113725 0.129412 1"/>
+      </body>
+      <body name="wheel_back" pos="-0.125 0 -0.05">
+        <joint name="wheel_back_spin" pos="0 0 0" axis="-1 0 0" damping="0.01"/>
+        <geom size="0.05 0.015" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0" mass="0.2" rgba="0.105882 0.113725 0.129412 1"/>
+      </body>
+      <body name="wheel_right" pos="0.0625 -0.108253 -0.05">
+        <joint name="wheel_right_spin" pos="0 0 0" axis="0.5 -0.866025 0" damping="0.01"/>
+        <geom size="0.05 0.015" quat="0.707107 -0.612372 -0.353553 0" type="cylinder" contype="0" conaffinity="0" mass="0.2" rgba="0.105882 0.113725 0.129412 1"/>
+      </body>
+      <body name="vertical_link" pos="0.01 0 0.19">
+        <joint name="lift" pos="0 0 0" axis="0 0 1" type="slide" limited="true" range="0 0.6" damping="50"/>
+        <geom name="carriage" size="0.05 0.17 0.025" type="box" contype="0" conaffinity="0" mass="0.8" rgba="0.356863 0.396078 0.447059 1"/>
+        <body name="left_base" childclass="left_so101_new_calib" pos="0.05 0.12 0.025">
+          <inertial pos="0.0137179 -5.19711e-05 0.0334843" quat="0.420519 0.558762 0.57198 0.428704" mass="0.147" diaginertia="0.000136127 0.000131807 0.000113233"/>
+          <geom class="left_visual" pos="-0.00636471 -9.94414e-05 -0.0024" quat="0.5 0.5 0.5 0.5" material="left_base_motor_holder_so101_v1_material" mesh="left_base_motor_holder_so101_v1"/>
+          <geom class="left_visual" pos="-0.00636471 -8.97657e-09 -0.0024" quat="0.5 0.5 0.5 0.5" material="left_base_so101_v2_material" mesh="left_base_so101_v2"/>
+          <geom class="left_visual" pos="0.0263353 -8.97657e-09 0.0437" quat="1 0 0 0" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+          <geom class="left_visual" pos="-0.0309827 -0.000199441 0.0474" quat="0.5 0.5 0.5 0.5" material="left_waveshare_mounting_plate_so101_v2_material" mesh="left_waveshare_mounting_plate_so101_v2"/>
+          <site name="left_baseframe" pos="0 0 0" quat="1 0 0 0" group="3"/>
+          <body name="left_shoulder" pos="0.0388353 -8.97657e-09 0.0624" quat="0 0 -1 0">
+            <inertial pos="-0.0307604 -1.66727e-05 -0.0252713" quat="0.999865 0.00149563 0.0097084 0.0132043" mass="0.100006" diaginertia="8.37836e-05 8.10388e-05 2.39552e-05"/>
+            <joint name="left_shoulder_pan" class="left_sts3215" pos="0 0 0" axis="0 0 1" range="-1.91986 1.91986"/>
+            <geom class="left_visual" pos="-0.0303992 0.000422241 -0.0417" quat="0.5 0.5 0.5 -0.5" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+            <geom class="left_collision" pos="-0.0303992 0.000422241 -0.0417" quat="0.5 0.5 0.5 -0.5" type="mesh" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+            <geom class="left_visual" pos="-0.0675992 -0.000177759 0.0158499" quat="0.5 0.5 -0.5 0.5" material="left_motor_holder_so101_base_v1_material" mesh="left_motor_holder_so101_base_v1"/>
+            <geom class="left_collision" pos="-0.0675992 -0.000177759 0.0158499" quat="0.5 0.5 -0.5 0.5" type="mesh" material="left_motor_holder_so101_base_v1_material" mesh="left_motor_holder_so101_base_v1"/>
+            <geom class="left_visual" pos="0.0122008 2.22413e-05 0.0464" quat="0.707107 -0.707107 0 0" material="left_rotation_pitch_so101_v1_material" mesh="left_rotation_pitch_so101_v1"/>
+            <geom class="left_collision" pos="0.0122008 2.22413e-05 0.0464" quat="0.707107 -0.707107 0 0" type="mesh" material="left_rotation_pitch_so101_v1_material" mesh="left_rotation_pitch_so101_v1"/>
+            <body name="left_upper_arm" pos="-0.0303992 -0.0182778 -0.0542" quat="0.5 -0.5 -0.5 -0.5">
+              <inertial pos="-0.0898471 -0.00838224 0.0184089" quat="0.453195 0.454063 0.541891 0.542951" mass="0.103" diaginertia="0.000150873 0.000142487 3.72451e-05"/>
+              <joint name="left_shoulder_lift" class="left_sts3215" pos="0 0 0" axis="0 0 1" range="-1.74533 1.74533"/>
+              <geom class="left_visual" pos="-0.11257 -0.0155 0.0187" quat="0 -0.707107 0.707107 0" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+              <geom class="left_collision" pos="-0.11257 -0.0155 0.0187" quat="0 -0.707107 0.707107 0" type="mesh" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+              <geom class="left_visual" pos="-0.065085 0.012 0.0182" quat="0 1 0 0" material="left_upper_arm_so101_v1_material" mesh="left_upper_arm_so101_v1"/>
+              <geom class="left_collision" pos="-0.065085 0.012 0.0182" quat="0 1 0 0" type="mesh" material="left_upper_arm_so101_v1_material" mesh="left_upper_arm_so101_v1"/>
+              <body name="left_lower_arm" pos="-0.11257 -0.028 0" quat="0.707107 0 0 0.707107">
+                <inertial pos="-0.0980701 0.00324376 0.0182831" quat="0.510729 0.517006 0.487966 0.483477" mass="0.104" diaginertia="0.000160262 0.000145304 2.83125e-05"/>
+                <joint name="left_elbow_flex" class="left_sts3215" pos="0 0 0" axis="0 0 1" range="-1.69 1.69"/>
+                <geom class="left_visual" pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0" material="left_under_arm_so101_v1_material" mesh="left_under_arm_so101_v1"/>
+                <geom class="left_collision" pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0" type="mesh" material="left_under_arm_so101_v1_material" mesh="left_under_arm_so101_v1"/>
+                <geom class="left_visual" pos="-0.0648499 -0.032 0.018" quat="0 -1 0 0" material="left_motor_holder_so101_wrist_v1_material" mesh="left_motor_holder_so101_wrist_v1"/>
+                <geom class="left_collision" pos="-0.0648499 -0.032 0.018" quat="0 -1 0 0" type="mesh" material="left_motor_holder_so101_wrist_v1_material" mesh="left_motor_holder_so101_wrist_v1"/>
+                <geom class="left_visual" pos="-0.1224 0.0052 0.0187" quat="0 0 1 0" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+                <geom class="left_collision" pos="-0.1224 0.0052 0.0187" quat="0 0 1 0" type="mesh" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+                <body name="left_wrist" pos="-0.1349 0.0052 0" quat="0.707107 0 0 -0.707107">
+                  <inertial pos="-0.000103312 -0.0386143 0.0281156" quat="0.967143 0.254226 0.00162226 -0.000146307" mass="0.079" diaginertia="3.68265e-05 2.74474e-05 1.89434e-05"/>
+                  <joint name="left_wrist_flex" class="left_sts3215" pos="0 0 0" axis="0 0 1" range="-1.65806 1.65806"/>
+                  <geom class="left_visual" pos="0 -0.0424 0.0306" quat="0.5 0.5 0.5 -0.5" material="left_sts3215_03a_no_horn_v1_material" mesh="left_sts3215_03a_no_horn_v1"/>
+                  <geom class="left_collision" pos="0 -0.0424 0.0306" quat="0.5 0.5 0.5 -0.5" type="mesh" material="left_sts3215_03a_no_horn_v1_material" mesh="left_sts3215_03a_no_horn_v1"/>
+                  <geom class="left_visual" pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5" material="left_wrist_roll_pitch_so101_v2_material" mesh="left_wrist_roll_pitch_so101_v2"/>
+                  <geom class="left_collision" pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5" type="mesh" material="left_wrist_roll_pitch_so101_v2_material" mesh="left_wrist_roll_pitch_so101_v2"/>
+                  <body name="left_gripper" pos="0 -0.0611 0.0181" quat="0.0172091 -0.0172091 0.706897 0.706897">
+                    <inertial pos="0.000213627 0.000245138 -0.025187" quat="0.600717 0.355993 0.35863 0.61951" mass="0.087" diaginertia="4.33735e-05 3.77229e-05 2.42839e-05"/>
+                    <joint name="left_wrist_roll" class="left_sts3215" pos="0 0 0" axis="0 0 1" range="-2.74385 2.84121"/>
+                    <geom class="left_visual" pos="0.0077 0.0001 -0.0234" quat="0.707107 -0.707107 0 0" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+                    <geom class="left_collision" pos="0.0077 0.0001 -0.0234" quat="0.707107 -0.707107 0 0" type="mesh" material="left_sts3215_03a_v1_material" mesh="left_sts3215_03a_v1"/>
+                    <geom class="left_visual" pos="0 -0.000218214 0.000949706" quat="0 1 0 0" material="left_wrist_roll_follower_so101_v1_material" mesh="left_wrist_roll_follower_so101_v1"/>
+                    <geom class="left_collision" pos="0 -0.000218214 0.000949706" quat="0 1 0 0" type="mesh" material="left_wrist_roll_follower_so101_v1_material" mesh="left_wrist_roll_follower_so101_v1"/>
+                    <site name="left_gripperframe" pos="-0.0079 -0.000218121 -0.0981274" quat="0.707107 0 0.707107 0" group="3"/>
+                    <body name="left_moving_jaw_so101_v1" pos="0.0202 0.0188 -0.0234" quat="0.707107 0.707107 -1.85362e-08 1.85362e-08">
+                      <inertial pos="-0.00157495 -0.0300244 0.0192755" quat="0.695265 0.717965 -0.0245618 -0.0230097" mass="0.012" diaginertia="6.63582e-06 5.29092e-06 1.86523e-06"/>
+                      <joint name="left_gripper" class="left_sts3215" pos="0 0 0" axis="0 0 1" range="-0.174533 1.74533"/>
+                      <geom class="left_visual" pos="0 0 0.0189" quat="1 0 0 0" material="left_moving_jaw_so101_v1_material" mesh="left_moving_jaw_so101_v1"/>
+                      <geom class="left_collision" pos="0 0 0.0189" quat="1 0 0 0" type="mesh" material="left_moving_jaw_so101_v1_material" mesh="left_moving_jaw_so101_v1"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+        <body name="right_base" childclass="right_so101_new_calib" pos="0.05 -0.12 0.025">
+          <inertial pos="0.0137179 -5.19711e-05 0.0334843" quat="0.420519 0.558762 0.57198 0.428704" mass="0.147" diaginertia="0.000136127 0.000131807 0.000113233"/>
+          <geom class="right_visual" pos="-0.00636471 -9.94414e-05 -0.0024" quat="0.5 0.5 0.5 0.5" material="right_base_motor_holder_so101_v1_material" mesh="right_base_motor_holder_so101_v1"/>
+          <geom class="right_visual" pos="-0.00636471 -8.97657e-09 -0.0024" quat="0.5 0.5 0.5 0.5" material="right_base_so101_v2_material" mesh="right_base_so101_v2"/>
+          <geom class="right_visual" pos="0.0263353 -8.97657e-09 0.0437" quat="1 0 0 0" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+          <geom class="right_visual" pos="-0.0309827 -0.000199441 0.0474" quat="0.5 0.5 0.5 0.5" material="right_waveshare_mounting_plate_so101_v2_material" mesh="right_waveshare_mounting_plate_so101_v2"/>
+          <site name="right_baseframe" pos="0 0 0" quat="1 0 0 0" group="3"/>
+          <body name="right_shoulder" pos="0.0388353 -8.97657e-09 0.0624" quat="0 0 -1 0">
+            <inertial pos="-0.0307604 -1.66727e-05 -0.0252713" quat="0.999865 0.00149563 0.0097084 0.0132043" mass="0.100006" diaginertia="8.37836e-05 8.10388e-05 2.39552e-05"/>
+            <joint name="right_shoulder_pan" class="right_sts3215" pos="0 0 0" axis="0 0 1" range="-1.91986 1.91986"/>
+            <geom class="right_visual" pos="-0.0303992 0.000422241 -0.0417" quat="0.5 0.5 0.5 -0.5" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+            <geom class="right_collision" pos="-0.0303992 0.000422241 -0.0417" quat="0.5 0.5 0.5 -0.5" type="mesh" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+            <geom class="right_visual" pos="-0.0675992 -0.000177759 0.0158499" quat="0.5 0.5 -0.5 0.5" material="right_motor_holder_so101_base_v1_material" mesh="right_motor_holder_so101_base_v1"/>
+            <geom class="right_collision" pos="-0.0675992 -0.000177759 0.0158499" quat="0.5 0.5 -0.5 0.5" type="mesh" material="right_motor_holder_so101_base_v1_material" mesh="right_motor_holder_so101_base_v1"/>
+            <geom class="right_visual" pos="0.0122008 2.22413e-05 0.0464" quat="0.707107 -0.707107 0 0" material="right_rotation_pitch_so101_v1_material" mesh="right_rotation_pitch_so101_v1"/>
+            <geom class="right_collision" pos="0.0122008 2.22413e-05 0.0464" quat="0.707107 -0.707107 0 0" type="mesh" material="right_rotation_pitch_so101_v1_material" mesh="right_rotation_pitch_so101_v1"/>
+            <body name="right_upper_arm" pos="-0.0303992 -0.0182778 -0.0542" quat="0.5 -0.5 -0.5 -0.5">
+              <inertial pos="-0.0898471 -0.00838224 0.0184089" quat="0.453195 0.454063 0.541891 0.542951" mass="0.103" diaginertia="0.000150873 0.000142487 3.72451e-05"/>
+              <joint name="right_shoulder_lift" class="right_sts3215" pos="0 0 0" axis="0 0 1" range="-1.74533 1.74533"/>
+              <geom class="right_visual" pos="-0.11257 -0.0155 0.0187" quat="0 -0.707107 0.707107 0" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+              <geom class="right_collision" pos="-0.11257 -0.0155 0.0187" quat="0 -0.707107 0.707107 0" type="mesh" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+              <geom class="right_visual" pos="-0.065085 0.012 0.0182" quat="0 1 0 0" material="right_upper_arm_so101_v1_material" mesh="right_upper_arm_so101_v1"/>
+              <geom class="right_collision" pos="-0.065085 0.012 0.0182" quat="0 1 0 0" type="mesh" material="right_upper_arm_so101_v1_material" mesh="right_upper_arm_so101_v1"/>
+              <body name="right_lower_arm" pos="-0.11257 -0.028 0" quat="0.707107 0 0 0.707107">
+                <inertial pos="-0.0980701 0.00324376 0.0182831" quat="0.510729 0.517006 0.487966 0.483477" mass="0.104" diaginertia="0.000160262 0.000145304 2.83125e-05"/>
+                <joint name="right_elbow_flex" class="right_sts3215" pos="0 0 0" axis="0 0 1" range="-1.69 1.69"/>
+                <geom class="right_visual" pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0" material="right_under_arm_so101_v1_material" mesh="right_under_arm_so101_v1"/>
+                <geom class="right_collision" pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0" type="mesh" material="right_under_arm_so101_v1_material" mesh="right_under_arm_so101_v1"/>
+                <geom class="right_visual" pos="-0.0648499 -0.032 0.018" quat="0 -1 0 0" material="right_motor_holder_so101_wrist_v1_material" mesh="right_motor_holder_so101_wrist_v1"/>
+                <geom class="right_collision" pos="-0.0648499 -0.032 0.018" quat="0 -1 0 0" type="mesh" material="right_motor_holder_so101_wrist_v1_material" mesh="right_motor_holder_so101_wrist_v1"/>
+                <geom class="right_visual" pos="-0.1224 0.0052 0.0187" quat="0 0 1 0" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+                <geom class="right_collision" pos="-0.1224 0.0052 0.0187" quat="0 0 1 0" type="mesh" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+                <body name="right_wrist" pos="-0.1349 0.0052 0" quat="0.707107 0 0 -0.707107">
+                  <inertial pos="-0.000103312 -0.0386143 0.0281156" quat="0.967143 0.254226 0.00162226 -0.000146307" mass="0.079" diaginertia="3.68265e-05 2.74474e-05 1.89434e-05"/>
+                  <joint name="right_wrist_flex" class="right_sts3215" pos="0 0 0" axis="0 0 1" range="-1.65806 1.65806"/>
+                  <geom class="right_visual" pos="0 -0.0424 0.0306" quat="0.5 0.5 0.5 -0.5" material="right_sts3215_03a_no_horn_v1_material" mesh="right_sts3215_03a_no_horn_v1"/>
+                  <geom class="right_collision" pos="0 -0.0424 0.0306" quat="0.5 0.5 0.5 -0.5" type="mesh" material="right_sts3215_03a_no_horn_v1_material" mesh="right_sts3215_03a_no_horn_v1"/>
+                  <geom class="right_visual" pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5" material="right_wrist_roll_pitch_so101_v2_material" mesh="right_wrist_roll_pitch_so101_v2"/>
+                  <geom class="right_collision" pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5" type="mesh" material="right_wrist_roll_pitch_so101_v2_material" mesh="right_wrist_roll_pitch_so101_v2"/>
+                  <body name="right_gripper" pos="0 -0.0611 0.0181" quat="0.0172091 -0.0172091 0.706897 0.706897">
+                    <inertial pos="0.000213627 0.000245138 -0.025187" quat="0.600717 0.355993 0.35863 0.61951" mass="0.087" diaginertia="4.33735e-05 3.77229e-05 2.42839e-05"/>
+                    <joint name="right_wrist_roll" class="right_sts3215" pos="0 0 0" axis="0 0 1" range="-2.74385 2.84121"/>
+                    <geom class="right_visual" pos="0.0077 0.0001 -0.0234" quat="0.707107 -0.707107 0 0" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+                    <geom class="right_collision" pos="0.0077 0.0001 -0.0234" quat="0.707107 -0.707107 0 0" type="mesh" material="right_sts3215_03a_v1_material" mesh="right_sts3215_03a_v1"/>
+                    <geom class="right_visual" pos="0 -0.000218214 0.000949706" quat="0 1 0 0" material="right_wrist_roll_follower_so101_v1_material" mesh="right_wrist_roll_follower_so101_v1"/>
+                    <geom class="right_collision" pos="0 -0.000218214 0.000949706" quat="0 1 0 0" type="mesh" material="right_wrist_roll_follower_so101_v1_material" mesh="right_wrist_roll_follower_so101_v1"/>
+                    <site name="right_gripperframe" pos="-0.0079 -0.000218121 -0.0981274" quat="0.707107 0 0.707107 0" group="3"/>
+                    <body name="right_moving_jaw_so101_v1" pos="0.0202 0.0188 -0.0234" quat="0.707107 0.707107 -1.85362e-08 1.85362e-08">
+                      <inertial pos="-0.00157495 -0.0300244 0.0192755" quat="0.695265 0.717965 -0.0245618 -0.0230097" mass="0.012" diaginertia="6.63582e-06 5.29092e-06 1.86523e-06"/>
+                      <joint name="right_gripper" class="right_sts3215" pos="0 0 0" axis="0 0 1" range="-0.174533 1.74533"/>
+                      <geom class="right_visual" pos="0 0 0.0189" quat="1 0 0 0" material="right_moving_jaw_so101_v1_material" mesh="right_moving_jaw_so101_v1"/>
+                      <geom class="right_collision" pos="0 0 0.0189" quat="1 0 0 0" type="mesh" material="right_moving_jaw_so101_v1_material" mesh="right_moving_jaw_so101_v1"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <general name="left_shoulder_pan" class="left_sts3215" joint="left_shoulder_pan" ctrlrange="-1.91986 1.91986" forcerange="-3.35 3.35"/>
+    <general name="left_shoulder_lift" class="left_sts3215" joint="left_shoulder_lift" ctrlrange="-1.74533 1.74533" forcerange="-3.35 3.35"/>
+    <general name="left_elbow_flex" class="left_sts3215" joint="left_elbow_flex" ctrlrange="-1.69 1.69" forcerange="-3.35 3.35"/>
+    <general name="left_wrist_flex" class="left_sts3215" joint="left_wrist_flex" ctrlrange="-1.65806 1.65806" forcerange="-3.35 3.35"/>
+    <general name="left_wrist_roll" class="left_sts3215" joint="left_wrist_roll" ctrlrange="-2.74385 2.84121" forcerange="-3.35 3.35"/>
+    <general name="left_gripper" class="left_sts3215" joint="left_gripper" ctrlrange="-0.17453 1.74533" forcerange="-3.35 3.35"/>
+    <general name="right_shoulder_pan" class="right_sts3215" joint="right_shoulder_pan" ctrlrange="-1.91986 1.91986" forcerange="-3.35 3.35"/>
+    <general name="right_shoulder_lift" class="right_sts3215" joint="right_shoulder_lift" ctrlrange="-1.74533 1.74533" forcerange="-3.35 3.35"/>
+    <general name="right_elbow_flex" class="right_sts3215" joint="right_elbow_flex" ctrlrange="-1.69 1.69" forcerange="-3.35 3.35"/>
+    <general name="right_wrist_flex" class="right_sts3215" joint="right_wrist_flex" ctrlrange="-1.65806 1.65806" forcerange="-3.35 3.35"/>
+    <general name="right_wrist_roll" class="right_sts3215" joint="right_wrist_roll" ctrlrange="-2.74385 2.84121" forcerange="-3.35 3.35"/>
+    <general name="right_gripper" class="right_sts3215" joint="right_gripper" ctrlrange="-0.17453 1.74533" forcerange="-3.35 3.35"/>
+    <general name="base_x_vel" joint="base_x" biastype="affine" gainprm="500" biasprm="0 0 -500"/>
+    <general name="base_y_vel" joint="base_y" biastype="affine" gainprm="500" biasprm="0 0 -500"/>
+    <general name="base_yaw_vel" joint="base_yaw" biastype="affine" gainprm="500" biasprm="0 0 -500"/>
+    <general name="lift_pos" joint="lift" ctrllimited="true" ctrlrange="0 0.6" biastype="affine" gainprm="20000" biasprm="0 -20000 -800"/>
+  </actuator>
+</mujoco>
