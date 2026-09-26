@@ -82,10 +82,16 @@ class TwinDriver:
             world = (c * vx - s * vy, s * vx + c * vy, w)
             for act, v in zip(self._base_act, world):
                 self.d.ctrl[act] = v
+            pose = [self.d.qpos[a] for a in self._base_qadr]
             t0 = time.perf_counter()
             mujoco.mj_step(self.m, self.d)
             if self.d.warning[mujoco.mjtWarning.mjWARN_BADQACC].number:
                 raise RuntimeError(f"twin simulation went unstable at t={self.d.time:.3f}s")
+            # The base is kinematic, like wheel odometry: the real wheel servos hold the chassis,
+            # so reaction torque from swinging arms must not spin or slide it.
+            for qa, da, p, v in zip(self._base_qadr, self._base_dadr, pose, world):
+                self.d.qpos[qa] = p + v * dt
+                self.d.qvel[da] = v
             if realtime:
                 time.sleep(max(0.0, self.m.opt.timestep - (time.perf_counter() - t0)))
 

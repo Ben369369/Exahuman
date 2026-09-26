@@ -24,6 +24,31 @@ python hybrid_twin/web/server.py --robot-ip <pi-ip> --host 0.0.0.0   # reachable
 Open http://localhost:8080. The page loads three.js from jsDelivr, so the browser needs
 internet access.
 
+### Mirror your leader arms on the twin (sim mode)
+
+```bash
+python hybrid_twin/tools/feetech_reader.py COM10 COM11      # probe: should list motors 1-6 per arm
+python hybrid_twin/web/server.py --leader-left COM10 --leader-right COM11
+python hybrid_twin/web/server.py --leader-left mock --leader-right mock   # no hardware: synthetic motion
+```
+
+The twin's arms follow the leader arms plugged into this laptop. Leader positions are read
+**read-only** at 50 Hz (`tools/feetech_reader.py`): no register writes and no torque changes.
+Calibration comes from what LeRobot stores in each servo's EEPROM, so no calibration JSON is
+needed. The Arms panel shows each leader's status and retries every second, so arms can be
+plugged in or powered up while the server runs.
+
+If the probe lists no motors:
+- Check the servo power supply; USB alone doesn't power the servos.
+- Check the Waveshare board's jumper is set to USB.
+- Check nothing else, such as a running teleop script, has the COM port open.
+
+Swap `--leader-left`/`--leader-right` if the sides are mirrored. If a joint moves the
+wrong way, flip it in `LEADER_SIGN` in `tools/leader_arms.py`.
+
+With `--robot-ip`, don't pass `--leader-*`. The teleop script owns the leader ports there,
+and the twin already shows the real follower arms.
+
 Add `--robot-model alohamini2` (or `alohamini2pro`) if that's the lab robot. It sets wheel
 geometry and lift speed and must match the model the Pi's Host runs with.
 
@@ -67,6 +92,9 @@ python hybrid_twin/web/mock_host.py                               # fake Host, r
 python hybrid_twin/web/server.py --robot-ip 127.0.0.1 --port 8081
 python hybrid_twin/web/test_bridge.py --url http://127.0.0.1:8081
 ```
+
+`python hybrid_twin/tools/test_leader_arms.py` tests the leader reader against a fake servo bus
+(real protocol packets, and it asserts the reader never writes).
 
 `test_bridge.py` also runs against the sim backend (default URL). It checks:
 - distance and angle accuracy;

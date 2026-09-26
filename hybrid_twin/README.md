@@ -34,6 +34,8 @@ hybrid_twin/
 └── tools/
     ├── build_twin.py      regenerates both files from one parameter set
     ├── twin_driver.py     drives the twin with the real robot's action keys; maps real state → twin
+    ├── feetech_reader.py  read-only Feetech servo reader (pyserial) for the laptop's leader arms
+    ├── leader_arms.py     background leader → twin joint angles (real ports or "mock")
     └── check_twin.py      smoke test (+ --viewer demo)
 ```
 
@@ -61,6 +63,7 @@ python -m mujoco.viewer --mjcf=hybrid_twin/arms/so101/scene.xml   # original sin
 pip install -r hybrid_twin/web/requirements.txt
 python hybrid_twin/web/server.py                     # drive the MuJoCo twin at http://localhost:8080
 python hybrid_twin/web/server.py --robot-ip <pi-ip>  # drive the real robot
+python hybrid_twin/web/server.py --leader-left COM10 --leader-right COM11  # twin arms follow your leaders
 ```
 
 See [web/README.md](web/README.md) for controls, safety behaviour and the teleop ownership

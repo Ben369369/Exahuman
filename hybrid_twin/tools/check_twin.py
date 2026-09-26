@@ -63,6 +63,14 @@ def check_mjcf() -> None:
     x3, y3, _ = twin.base_pose()
     assert abs(x3 - x2) < 0.01 and abs(y3 - y2) < 0.01, f"base drifted during lift/arm moves: {x3=:.3f} {y3=:.3f}"
 
+    # Swinging arms (leader teleop) must not spin or slide the parked base.
+    parked = twin.base_pose()
+    for i in range(250):
+        a = 1.5 * math.sin(3 * i * 0.02)
+        twin.set_arm_radians({"left_shoulder_pan": a, "right_shoulder_pan": a})
+        twin.run({}, seconds=0.02)
+    assert np.allclose(twin.base_pose(), parked, atol=1e-6), "arm reaction torque moved the base"
+
     # 6) watchdog: no command -> base stops (mirrors the host's 1 s watchdog).
     twin.run({"x.vel": 0.2}, seconds=0.5)
     twin.run({}, seconds=1.5, send=False)

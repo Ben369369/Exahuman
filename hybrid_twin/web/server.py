@@ -135,7 +135,7 @@ class LiftRamp:
 class SimBackend:
     name = "sim"
 
-    def __init__(self, robot_model: str):
+    def __init__(self, robot_model: str, leader=None):
         import mujoco
         from twin_driver import TwinDriver
 
@@ -148,6 +148,7 @@ class SimBackend:
         self.wheels = Odometry(spec["wheel_radius"], spec["base_radius"])
         self._joint_names = [model.joint(i).name for i in range(model.njnt)]
         self.last_action: dict = {}
+        self.leader = leader  # LeaderArms or None: the twin's arms follow the laptop's leader arms
 
     async def start(self) -> None:
         pass
@@ -160,6 +161,8 @@ class SimBackend:
 
     def tick(self, action: dict | None, dt: float) -> None:
         # None = bridge is quiet; the twin's own 1 s watchdog then stops it, like the Host.
+        if self.leader is not None:
+            self.twin.set_arm_radians(self.leader.radians())
         self.twin.run(action or {}, seconds=dt, send=action is not None)
         self.last_action = action or {}
         vx, vy, w = self.twin.base_velocity()
@@ -181,6 +184,8 @@ class SimBackend:
             "vel": [c * vx + s * vy, -s * vx + c * vy, math.degrees(w)],
             "joints": joints,
             "safety": {"target_source": "command" if self.last_action else "none"},
+            "arms": {"source": "leader" if self.leader else "none",
+                     "leader": self.leader.status() if self.leader else {}},
         }
 
 
@@ -285,6 +290,7 @@ class RobotBackend:
             "lift_mm": lift,
             "vel": [float(self.obs_json.get(k, 0.0)) for k in ("x.vel", "y.vel", "theta.vel")],
             "joints": joints,
+            "arms": {"source": "robot", "leader": {}},
             "safety": {
                 "target_source": self.safety.get("target_source"),
                 "watchdog_active": self.safety.get("watchdog_active"),
@@ -422,6 +428,8 @@ def main() -> None:
     parser.add_argument("--cmd-port", type=int, default=5555)
     parser.add_argument("--obs-port", type=int, default=5556)
     parser.add_argument("--robot-model", default="alohamini1", choices=sorted(ROBOT_SPECS))
+    parser.add_argument("--leader-left", help="leader arm serial port (e.g. COM10) or 'mock'; sim mode only")
+    parser.add_argument("--leader-right", help="leader arm serial port (e.g. COM11) or 'mock'; sim mode only")
     parser.add_argument("--host", default="127.0.0.1", help="use 0.0.0.0 to allow other lab machines")
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
@@ -430,10 +438,21 @@ def main() -> None:
     if sys.platform == "win32":
         # zmq.asyncio needs add_reader(), which Windows' default Proactor loop lacks.
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    if args.robot_ip and (args.leader_left or args.leader_right):
+        # In robot mode the teleop script owns the leader ports and drives the real follower;
+        # the twin already shows the follower's measured pose.
+        parser.error("--leader-* is for sim mode; with --robot-ip the twin mirrors the real arms")
     if args.robot_ip:
         backend = RobotBackend(args.robot_ip, args.cmd_port, args.obs_port, args.robot_model)
     else:
-        backend = SimBackend(args.robot_model)
+        leader = None
+        if args.leader_left or args.leader_right:
+            from leader_arms import LeaderArms
+
+            leader = LeaderArms({"left": args.leader_left, "right": args.leader_right})
+            leader.start()
+            logging.info("twin arms follow leader arms: %s", leader.ports)
+        backend = SimBackend(args.robot_model, leader)
     logging.info("backend=%s  open http://%s:%d", backend.name, args.host, args.port)
     web.run_app(build_app(Bridge(backend)), host=args.host, port=args.port, print=None)
 

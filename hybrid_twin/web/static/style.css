@@ -101,3 +101,9 @@ button { font: inherit; }
   .lever-track, .lever-scale { height: 140px; }
   .view-tools { display: none; }
 }
+
+.leaders { display: grid; gap: 4px; margin-top: 8px; }
+.leader { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+.leader b { font-weight: 500; }
+.leader .ok { color: var(--ok); }
+.leader .bad { color: var(--bad); text-align: right; }

@@ -263,6 +263,7 @@ function onState(st) {
   if (liftGoal !== null) g.style.bottom = frac(liftGoal);
   g.setAttribute("aria-valuenow", String(Math.round(liftGoal ?? st.lift_mm)));
 
+  renderArms(st.arms ?? {});
   for (const [name, cell] of Object.entries(jointCells)) {
     const v = st.joints[name];
     cell.textContent = v === undefined ? "—" : Math.round((v * 180) / Math.PI);
@@ -286,6 +287,37 @@ function onState(st) {
     trailGeo.setDrawRange(0, Math.min(trailN, TRAIL_MAX));
     trailGeo.attributes.position.needsUpdate = true;
   }
+}
+
+const ARMS_TEXT = {
+  leader: "The twin's arms follow the leader arms on this laptop.",
+  robot: "Real follower arms, driven by leader-arm teleop. The web UI never commands them.",
+  none: "Not connected. Start the server with --leader-left/--leader-right to mirror your leader arms.",
+};
+let armsKey = "";
+function renderArms(arms) {
+  const leaders = Object.entries(arms.leader ?? {});
+  const key = JSON.stringify([arms.source, leaders.map(([s, v]) => [s, v.ok, v.error])]);
+  if (key === armsKey) return; // avoid rebuilding the DOM 25x per second
+  armsKey = key;
+  $("arms-source").textContent = ARMS_TEXT[arms.source] ?? ARMS_TEXT.none;
+  const box = $("leaders");
+  const offline = leaders.filter(([, v]) => !v.ok);
+  $("leaders-hint").textContent = offline.length
+    ? `${offline[0][1].error ?? "offline"}. Retrying every second.`
+    : "";
+  box.replaceChildren(...leaders.map(([side, v]) => {
+    const row = document.createElement("div");
+    row.className = "leader";
+    const name = document.createElement("b");
+    name.textContent = `${side} · ${v.port}`;
+    const state = document.createElement("span");
+    state.className = v.ok ? "ok" : "bad";
+    state.textContent = v.ok ? "reading" : "offline";
+    if (!v.ok) row.title = v.error ?? "";
+    row.append(name, state);
+    return row;
+  }));
 }
 
 // ---------------------------------------------------------------- follow camera + loop
