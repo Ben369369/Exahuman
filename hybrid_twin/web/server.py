@@ -24,12 +24,18 @@ import asyncio
 import json
 import logging
 import math
+import os
 import sys
 import time
 from pathlib import Path
 from uuid import uuid4
 
-from aiohttp import WSMsgType, web
+# aiohttp's sendfile path on Windows can send 64 KB blocks out of order when the client reads
+# slowly (a browser busy parsing meshes), which corrupts the STLs into NaN/scrambled geometry.
+# Must be set before aiohttp is imported.
+os.environ.setdefault("AIOHTTP_NOSENDFILE", "1")
+
+from aiohttp import WSMsgType, web  # noqa: E402
 
 TWIN_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TWIN_ROOT / "tools"))
